@@ -130,7 +130,6 @@ date
 
         if self.type == "sge":
             sge_option = self.option
-            sge_option["N"] = self.id
         if self.type == "local":
             local_option = self.option
 
