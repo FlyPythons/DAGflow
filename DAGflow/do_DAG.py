@@ -314,7 +314,7 @@ The tasks were save in %s, you can resub it.
         LOG.info("All jobs were done!")
 
 
-def do_task(tasks, concurrent_tasks, log_name=""):
+def do_task(tasks, concurrent_tasks, refresh_time, log_name=""):
 
     start = time.time()
 
@@ -346,7 +346,6 @@ def do_task(tasks, concurrent_tasks, log_name=""):
     loop = 0
 
     while 1:
-        LOG.info("loop %s" % loop)
         # qsub tasks
         TASKS = qsub_tasks(TASKS, concurrent_tasks)
 
@@ -373,7 +372,7 @@ def do_task(tasks, concurrent_tasks, log_name=""):
         if loop != 0 and len(task_status["running"]) == 0:
             break
         else:
-            time.sleep(30)
+            time.sleep(refresh_time)
             loop += 1
             TASKS = update_task_status(TASKS)
 
@@ -397,7 +396,7 @@ Version: V0.9
 
     parser.add_argument("json",  help="The json file contain DAG information")
     parser.add_argument("-m", "--max_task", type=int, default=200, help="concurrent_tasks")
-
+    parser.add_argument("-r", "--refresh", type=int, default=30, help="refresh time of task status (seconds)")
     args = parser.parse_args()
 
     return args
@@ -410,7 +409,7 @@ def main():
         tasks = json.load(fh, object_pairs_hook=OrderedDict)
 
     TASK_NAME = args.json.rstrip(".json")
-    do_task(tasks, args.max_task, TASK_NAME+".log")
+    do_task(tasks, args.max_task, args.refresh, TASK_NAME+".log")
 
 
 if __name__ == "__main__":
