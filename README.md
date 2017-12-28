@@ -3,25 +3,25 @@ a python Module to create DAG Task and Manage Task on SGE
 ## Installation
 ### Requirements
 Python (2.5 or later)  
-SGE  
+Sun Grid Engine(SGE)
 
-DAGflow has been tested on CentOS and ubtune
+DAGflow has been tested on CentOS 7.2.1511 and Ubuntu 12.04.4 LTS
 ### Get the code
 Download the code and unzip it into desired installation directory 
 ```commandline
 mkdir /usr/local/pythonlib
 cd /usr/local/pythonlib
-wget 
-unzip DAGflow.zip
+wget https://github.com/FlyPythons/DAGflow/archive/master.zip
+unzip master.zip
 ```
 ### Test installation
 Add the installation directory to your PYTHONPATH.
 ```commandline
-export PYTHONPATH=/usr/local/pythonlib/:$PYTHONPATH
+export PYTHONPATH=/usr/local/pythonlib/DAGflow-master/:$PYTHONPATH
 ```
 Test
 ```commandline
-cd /usr/local/pythonlib/DAGflow/test
+cd /usr/local/pythonlib/DAGflow-master/test
 python test.py
 
 ```

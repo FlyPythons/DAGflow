@@ -113,7 +113,7 @@ date
 cd {}
 {}
 touch {}
-echo task all done
+echo task done
 date
 """.format(self.work_dir, self.script, self.done)
 
