@@ -1,4 +1,5 @@
 # DAGflow
+a python Module to create DAG Task and Manage Task on SGE
 ## Installation
 ### Requirements
 Python (2.5 or later)  

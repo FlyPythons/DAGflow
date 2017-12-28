@@ -55,7 +55,7 @@ def qhost():
             _status = "Y"
 
         r[_name] = _status
-    print(r)
+
     return r
 
 
@@ -262,14 +262,14 @@ def qdel_online_tasks(signum, frame):
 
     for task_id in TASKS:
 
-        if TASKS[task_id] != "running":
+        if TASKS[task_id]["status"] != "running":
             continue
 
         _id = TASKS[task_id]["id"]
 
         if _id in running_task_stat:
             os.popen('qdel %s' % _id)
-            LOG.info("Delete task %r" % _id)
+            LOG.info("Delete task %r id: %s" % (task_id, _id))
             TASKS[task_id]["status"] = "failed"
 
         # for local tasks
@@ -279,7 +279,7 @@ def qdel_online_tasks(signum, frame):
             except:
                 pass
 
-            LOG.info("Delete task %r" % task_id)
+            LOG.info("Delete task %r id: %s" % (task_id, _id.pid))
             TASKS[task_id]["status"] = "failed"
 
     write_tasks(TASKS, TASK_NAME + ".json")
@@ -346,6 +346,7 @@ def do_task(tasks, concurrent_tasks, log_name=""):
     loop = 0
 
     while 1:
+        LOG.info("loop %s" % loop)
         # qsub tasks
         TASKS = qsub_tasks(TASKS, concurrent_tasks)
 
