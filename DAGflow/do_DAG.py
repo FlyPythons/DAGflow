@@ -282,7 +282,7 @@ def qdel_online_tasks(signum, frame):
             LOG.info("Delete task %r" % task_id)
             TASKS[task_id]["status"] = "failed"
 
-    write_tasks(TASKS, TASK_NAME + ".resub.json")
+    write_tasks(TASKS, TASK_NAME + ".json")
 
     sys.exit("sorry, the program exit")
 
@@ -321,7 +321,7 @@ def do_task(tasks, concurrent_tasks, log_name=""):
     logging.basicConfig(level=logging.DEBUG,
                         format="[%(levelname)s] %(asctime)s  %(message)s",
                         filename=log_name,
-                        mode='w',
+                        filemode='w',
                         )
 
     console = logging.StreamHandler()
@@ -341,7 +341,7 @@ def do_task(tasks, concurrent_tasks, log_name=""):
 
     TASKS = update_task_status(TASKS)
 
-    failed_json = TASK_NAME + ".resub.json"
+    failed_json = TASK_NAME + ".json"
 
     loop = 0
 

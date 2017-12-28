@@ -26,6 +26,40 @@ class DAG(object):
 
         return 1
 
+    def add_dag(self, *dags):
+        """
+        add DAG object to DAG
+        :param dags:
+        :return:
+        """
+        depends = []
+
+        # get all id of tasks is depended
+        for task in self.task:
+            depends += task.depends
+
+        depends = set(depends)
+        last_task = []
+
+        # get tasks which is on the end of DAG
+        for task in self.task:
+
+            if task.id in depends:
+                continue
+            last_task.append(task)
+
+        for dag in dags:
+            assert isinstance(dag, DAG)
+
+            for task in dag.task:
+
+                if not task.depends:
+                    task.set_upstream(*last_task)
+
+            self.add_task(*dag.task)
+
+        return 1
+
     def to_json(self):
 
         jsn = OrderedDict()
@@ -39,7 +73,13 @@ class DAG(object):
             json.dump(jsn, fh, indent=2)
 
         LOG.info("Write DAG %r tasks to %r" % (self.id, fn))
-        return 1
+
+        return fn
+
+    def print_task(self):
+
+        for task in self.task:
+            print(task.id, task.depends)
 
     def from_json(self):
         pass
@@ -53,7 +93,7 @@ class Task(object):
         self.work_dir = os.path.abspath(work_dir)
         self.script = script
         self.type = type
-        self.option = {}
+        self.option = option
 
         if "o" not in self.option:
             self.option["o"] = os.path.join(work_dir, "%s.STDOUT" % task_id)
@@ -90,6 +130,7 @@ date
 
         if self.type == "sge":
             sge_option = self.option
+            sge_option["N"] = self.id
         if self.type == "local":
             local_option = self.option
 
