@@ -30,7 +30,7 @@ The following tutorial shows how to create a DAGflow and run it
 ### Draw you work flow
 Now i have a set of fasta files and i want to blast them to a db named 'db.fasta'.  
 To complete this work, a workflow as following is needed
-
+![image](https://raw.githubusercontent.com/wiki/FlyPythons/DAGflow/test/workflow.jpg)
 ### Write your workflow script
 At first, you should write your workflow script 
 ```python
