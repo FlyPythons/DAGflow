@@ -118,6 +118,10 @@ def update_task_status(tasks):
 
     for task_id in tasks.keys():
 
+        if os.path.exists(tasks[task_id]["done"]):
+            tasks[task_id]["status"] = "success"
+            continue
+
         if "id" not in tasks[task_id]:
             tasks[task_id]["id"] = ""
 

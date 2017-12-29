@@ -137,7 +137,8 @@ date
             "shell": self.script_path,
             "depends": self.depends,
             "sge_option": sge_option,
-            "local_option": local_option
+            "local_option": local_option,
+            "done": self.done
         }
 
         return r
