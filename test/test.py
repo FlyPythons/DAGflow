@@ -3,6 +3,7 @@ import os
 import sys
 from DAGflow.DAG import DAG, Task
 
+
 workflow = DAG("test")
 
 task1 = Task(

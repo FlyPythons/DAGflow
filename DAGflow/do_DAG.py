@@ -90,20 +90,9 @@ def qstat():
 
 def check_done_task(task):
 
-    if task["sge_option"]:
-        task_out = task["sge_option"]["o"]
-    else:
-        task_out = task["local_option"]["o"]
-
-    if os.path.isfile(task_out):
-
-        with open(task_out) as out:
-            content = out.read()
-
-        if not re.search("task done", content):
-            task["status"] = "failed"
-        else:
-            task["status"] = "success"
+    if os.path.isfile(task["done"]):
+        task["status"] = "success"
+        task["end"] = time.time()
     else:
         task["status"] = "failed"
 
@@ -240,6 +229,8 @@ def qsub_tasks(tasks, concurrent_tasks):
                 LOG.info("Submit task {task_id} with cmd '{qsub_cmd}'.".format(**locals()))
                 tasks[task_id]["id"] = _id
                 tasks[task_id]["status"] = "running"
+                tasks[task_id]["start"] = time.time()
+                tasks[task_id]["end"] = ""
                 n += 1
                 continue
             if tasks[task_id]["local_option"]:
@@ -254,6 +245,8 @@ def qsub_tasks(tasks, concurrent_tasks):
                 LOG.info("Running task {task_id} local.".format(**locals()))
                 tasks[task_id]["id"] = child
                 tasks[task_id]["status"] = "running"
+                tasks[task_id]["start"] = time.time()
+                tasks[task_id]["end"] = ""
                 n += 1
 
     return tasks
