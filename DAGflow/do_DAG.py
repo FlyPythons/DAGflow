@@ -107,12 +107,12 @@ def update_task_status(tasks):
 
     for task_id in tasks.keys():
 
+        if "id" not in tasks[task_id]:
+            tasks[task_id]["id"] = ""
+
         if os.path.exists(tasks[task_id]["done"]):
             tasks[task_id]["status"] = "success"
             continue
-
-        if "id" not in tasks[task_id]:
-            tasks[task_id]["id"] = ""
 
         if "status" not in tasks[task_id]:
             tasks[task_id]["status"] = "preparing"
@@ -297,10 +297,10 @@ def write_tasks(tasks, filename):
         if not isinstance(tasks[task_id]["id"], str):
             tasks[task_id]["id"] = "local"
 
-    if failed_tasks:
-        with open(filename, "w") as out:
-            json.dump(tasks, out, indent=2)
+    with open(filename, "w") as out:
+        json.dump(tasks, out, indent=2)
 
+    if failed_tasks:
         LOG.info("""\
 The following tasks were failed:
 %s
