@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import os
 import sys
-from DAGflow.DAG import DAG, Task
 
+from DAGflow import DAG, Task
 
 workflow = DAG("test")
 

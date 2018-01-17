@@ -4,7 +4,7 @@ This script is used to submit DAG tasks from .json
 The json can be created by another module DAG
 
 Author: fan junpeng (jpfan@whu.edu.cn)
-Version: V0.9
+Version: V0.1
 Last modified: 20171227
 
 task status:
@@ -388,7 +388,7 @@ This script is used to submit DAG tasks from .json
 The json can be created by another module DAG
 
 Author: fan junpeng (jpfan@whu.edu.cn)
-Version: V0.9
+Version: V0.1
         """)
 
     parser.add_argument("json",  help="The json file contain DAG information")

@@ -1,7 +1,7 @@
 """
 Module to create DAG tasks
 Author: fan junpeng(jpfan@whu.edu.cn)
-Version: 0.9
+Version: 0.1
 """
 
 import os.path

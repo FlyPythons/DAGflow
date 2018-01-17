@@ -17,7 +17,7 @@ unzip master.zip
 ### Test installation
 Add the installation directory to your PYTHONPATH.
 ```commandline
-export PYTHONPATH=/usr/local/pythonlib/DAGflow-master/:$PYTHONPATH
+    
 ```
 Test
 ```commandline
