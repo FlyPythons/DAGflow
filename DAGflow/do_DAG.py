@@ -4,7 +4,7 @@ This script is used to submit DAG tasks from .json
 The json can be created by another module DAG
 
 Author: fan junpeng (jpfan@whu.edu.cn)
-Version: V0.1
+Version: V0.2
 Last modified: 20171227
 
 task status:
@@ -16,7 +16,6 @@ failed     the job was done but failed
 """
 
 import os
-import re
 from collections import OrderedDict
 import argparse
 import sys
@@ -24,7 +23,7 @@ import logging
 import time
 import json
 import signal
-import subprocess
+from .DAG import Task, DAG
 
 
 LOG = logging.getLogger(__name__)
@@ -34,7 +33,7 @@ TASK_NAME = ""
 
 def qhost():
     """
-
+    "get the status of nodes"
     :return:
     """
     r = {}
@@ -61,7 +60,7 @@ def qhost():
 
 def qstat():
     """
-    return a dict of qstat -u yourname
+    get the running jobs
     :return:
     """
 
@@ -88,166 +87,107 @@ def qstat():
     return r
 
 
-def check_done_task(task):
+def ps():
+    r = []
+    user = os.popen('whoami').read().strip()
+    contents = os.popen('ps -u %s ' % user).read().strip().split('\n')
 
-    if os.path.isfile(task["done"]):
-        task["status"] = "success"
-        task["end"] = time.time()
-    else:
-        task["status"] = "failed"
-
-    return task
-
-
-def update_task_status(tasks):
-    running_task_stat = qstat()
-
-    queue_status = qhost()
-    died_queue = [i for i in queue_status if queue_status[i] == "N"]
-
-    for task_id in tasks.keys():
-
-        if "id" not in tasks[task_id]:
-            tasks[task_id]["id"] = ""
-
-        if os.path.exists(tasks[task_id]["done"]):
-            tasks[task_id]["status"] = "success"
-            continue
-
-        if "status" not in tasks[task_id]:
-            tasks[task_id]["status"] = "preparing"
-
-        _id = tasks[task_id]["id"]
-        _status = tasks[task_id]["status"]
-
-        # preparing tasks and waiting tasks
-        if _status == "preparing":
-            # check task depends, if a preparing task's depends submit, change stats to waiting
-            dep_status = 1
-            for dp in tasks[task_id]["depends"]:
-                
-                if tasks[dp]["status"] not in ["success"]:  # if the
-                    dep_status = 0
-                    break
-
-            if dep_status:
-                tasks[task_id]["status"] = "waiting"
-            
-            continue
-
-        # pass success or failed task
-        if _status in ["success", "failed", "waiting"]:
-            continue
-
-        # check recent done tasks on sge
-        if _id and isinstance(_id, str) and _id not in running_task_stat:
-            tasks[task_id] = check_done_task(tasks[task_id])
-            continue
-
-        # check tasks local
-        if not isinstance(_id, str):
-            task_status = _id.poll()
-
-            # task is running
-            if task_status is None:
-                continue
-            tasks[task_id] = check_done_task(tasks[task_id])
-            continue
-
-        # running task
-        _status = running_task_stat[_id]["status"]
-        _node = running_task_stat[_id]["node"]
-
-        if _node in died_queue or _status == "Eqw":
-            os.popen('qdel %s' % _id)
-            LOG.debug("Delete job %r" % _id)
-
-            tasks[task_id]["status"] = "failed"
-    
-    return tasks
-
-
-def dict2str(params):
-    """
-    transform **params to real program param
-     to
-    :param params: params from test* eg: {"m": "a.fasta", "n": True, "i": False}
-    :return: real param eg: "-query a.fasta -n "
-
-    """
-    params = dict(params)
-    r = ""
-    for param, value in params.items():
-
-        if isinstance(value, bool):
-            if value:
-                r += " -%s " % param
-                continue
-        else:
-            r += " -%s %s " % (param, value)
+    for line in contents:
+        r.append(line.split()[0])
 
     return r
 
 
-def qsub_tasks(tasks, concurrent_tasks):
+def update_task_status(tasks):
+    """
+
+    :param tasks:
+    :return:
+    """
+    sge_running_task = qstat()
+    #local_running_task = ps()
+
+    queue_status = qhost()
+    died_queue = [i for i in queue_status if queue_status[i] == "N"]
+
+    for id, task in tasks.items():
+
+        # pass success or failed task
+        if task.status in ["success", "failed", "waiting"]:
+            continue
+
+        # preparing tasks and waiting tasks
+        if task.status == "preparing":
+            # check task depends, if a preparing task's depends submit, change stats to waiting
+            dep_status = 1
+
+            for _id in task.depends:
+
+                if tasks[_id].status != "success":
+                    dep_status = 0
+                    break
+
+            if dep_status:
+                task.status = "waiting"
+            continue
+
+        # check recent done tasks on sge
+        if task.type == "sge" and task.run_id not in sge_running_task:
+            task.check_done()
+            continue
+        elif task.type == "local":
+            if task.run_id.poll():
+                task.check_done()
+
+            continue
+        else:
+            pass
+
+        # check sge tasks running status
+        _status = sge_running_task[task.run_id]["status"]
+
+        if _status == "Eqw":
+            task.kill()
+
+        _node = sge_running_task[task.run_id]["node"]
+
+        if _node in died_queue:
+            task.kill()
+            task.status = "preparing"
+    
+    return tasks
+
+
+def submit_tasks(tasks, concurrent_tasks):
 
     # limit the max concurrent_tasks
     if concurrent_tasks > 800:
         concurrent_tasks = 800
 
-    running_tasks = OrderedDict()
-    waiting_tasks = OrderedDict()
+    running_tasks = []
+    waiting_tasks = []
 
-    for task_id in tasks:
+    for id, task in tasks.items():
 
-        if tasks[task_id]["status"] == "running":
-            running_tasks[task_id] = tasks[task_id]
+        if task.status == "running":
+            running_tasks.append(task)
 
-        if tasks[task_id]["status"] == "waiting":
-            waiting_tasks[task_id] = tasks[task_id]
+        if task.status == "waiting":
+            waiting_tasks.append(task)
 
     # job all submitted, pass
     if not waiting_tasks:
         return tasks
 
-    task_num = concurrent_tasks - len(running_tasks)
+    task_num = len(running_tasks)
 
-    n = 0
-    for task_id in waiting_tasks:
+    for task in waiting_tasks:
+        task_num += 1
 
-        if n < task_num:
-            if tasks[task_id]["sge_option"]:
-                qsub_cmd = "qsub -cwd %s %s" % (dict2str(tasks[task_id]["sge_option"]), tasks[task_id]["shell"])
-                _id = os.popen(qsub_cmd).read().strip().split()[2]
+        if task_num > concurrent_tasks:
+            break
 
-                try:
-                    int(_id)
-                except:
-                    LOG.error(_id)
-                    raise Exception(_id)
-
-                LOG.info("Submit task {task_id} with cmd '{qsub_cmd}'.".format(**locals()))
-                tasks[task_id]["id"] = _id
-                tasks[task_id]["status"] = "running"
-                tasks[task_id]["start"] = time.time()
-                tasks[task_id]["end"] = ""
-                n += 1
-                continue
-            if tasks[task_id]["local_option"]:
-                cmd = "sh %s" % tasks[task_id]["shell"]
-                child = subprocess.Popen(
-                    cmd,
-                    stdout=open(tasks[task_id]["local_option"]["o"], "w"),
-                    stderr=open(tasks[task_id]["local_option"]["e"], "w"),
-                    shell=True
-                )
-
-                LOG.info("Running task {task_id} local.".format(**locals()))
-                tasks[task_id]["id"] = child
-                tasks[task_id]["status"] = "running"
-                tasks[task_id]["start"] = time.time()
-                tasks[task_id]["end"] = ""
-                n += 1
+        task.run()
 
     return tasks
 
@@ -255,29 +195,11 @@ def qsub_tasks(tasks, concurrent_tasks):
 def qdel_online_tasks(signum, frame):
     LOG.info("delete all running jobs, please wait")
     time.sleep(3)
-    running_task_stat = qstat()
 
-    for task_id in TASKS:
+    for id, task in TASKS.items():
 
-        if TASKS[task_id]["status"] != "running":
-            continue
-
-        _id = TASKS[task_id]["id"]
-
-        if _id in running_task_stat:
-            os.popen('qdel %s' % _id)
-            LOG.info("Delete task %r id: %s" % (task_id, _id))
-            TASKS[task_id]["status"] = "failed"
-
-        # for local tasks
-        if not isinstance(_id, str):
-            try:
-                _id.kill()
-            except:
-                pass
-
-            LOG.info("Delete task %r id: %s" % (task_id, _id.pid))
-            TASKS[task_id]["status"] = "failed"
+        if task.status == "running":
+            task.kill()
 
     write_tasks(TASKS, TASK_NAME + ".json")
 
@@ -287,18 +209,17 @@ def qdel_online_tasks(signum, frame):
 def write_tasks(tasks, filename):
     failed_tasks = []
 
-    for task_id in tasks:
+    tasks_json = OrderedDict()
 
-        if tasks[task_id]["status"] != "success":
-            failed_tasks.append(task_id)
-            tasks[task_id]["status"] = "preparing"
-            tasks[task_id]["id"] = ""
+    for id, task in tasks.items():
 
-        if not isinstance(tasks[task_id]["id"], str):
-            tasks[task_id]["id"] = "local"
+        if task.status != "success":
+            failed_tasks.append(task.id)
+
+        tasks_json.update(task.to_json())
 
     with open(filename, "w") as out:
-        json.dump(tasks, out, indent=2)
+        json.dump(tasks_json, out, indent=2)
 
     if failed_tasks:
         LOG.info("""\
@@ -311,7 +232,7 @@ The tasks were save in %s, you can resub it.
         LOG.info("All jobs were done!")
 
 
-def do_task(tasks, concurrent_tasks, refresh_time, log_name=""):
+def do_dag(dag, concurrent_tasks, refresh_time, log_name=""):
 
     start = time.time()
 
@@ -330,13 +251,14 @@ def do_task(tasks, concurrent_tasks, refresh_time, log_name=""):
     LOG.info("Start job.")
 
     global TASKS
-    TASKS = tasks
+    TASKS = dag.tasks
 
     signal.signal(signal.SIGINT, qdel_online_tasks)
     signal.signal(signal.SIGTERM, qdel_online_tasks)
     # signal.signal(signal.SIGKILL, qdel_online_tasks)
 
-    TASKS = update_task_status(TASKS)
+    for id, task in TASKS.items():
+        task.init()
 
     failed_json = TASK_NAME + ".json"
 
@@ -344,7 +266,7 @@ def do_task(tasks, concurrent_tasks, refresh_time, log_name=""):
 
     while 1:
         # qsub tasks
-        TASKS = qsub_tasks(TASKS, concurrent_tasks)
+        submit_tasks(TASKS, concurrent_tasks)
 
         task_status = {
             "preparing": [],
@@ -354,9 +276,8 @@ def do_task(tasks, concurrent_tasks, refresh_time, log_name=""):
             "failed": []
         }
 
-        for task_id in TASKS:
-            status = TASKS[task_id]["status"]
-            task_status[status].append(task_id)
+        for id, task in TASKS.items():
+            task_status[task.status].append(id)
 
         info = "job status: %s preparing %s waiting, %s running, %s success, %s failed." % (
             len(task_status["preparing"]),
@@ -371,7 +292,7 @@ def do_task(tasks, concurrent_tasks, refresh_time, log_name=""):
         else:
             time.sleep(refresh_time)
             loop += 1
-            TASKS = update_task_status(TASKS)
+            update_task_status(TASKS)
 
     # write failed
     write_tasks(TASKS, failed_json)
@@ -388,7 +309,7 @@ This script is used to submit DAG tasks from .json
 The json can be created by another module DAG
 
 Author: fan junpeng (jpfan@whu.edu.cn)
-Version: V0.1
+Version: V0.9
         """)
 
     parser.add_argument("json",  help="The json file contain DAG information")
@@ -402,11 +323,11 @@ Version: V0.1
 def main():
     global TASK_NAME
     args = get_args()
-    with open(args.json) as fh:
-        tasks = json.load(fh, object_pairs_hook=OrderedDict)
 
-    TASK_NAME = args.json.rstrip(".json")
-    do_task(tasks, args.max_task, args.refresh, TASK_NAME+".log")
+    TASK_NAME = os.path.splitext(os.path.basename(args.json))[0]
+    print(TASK_NAME)
+    dag = DAG.from_json(args.json)
+    do_dag(dag, args.max_task, args.refresh, TASK_NAME+".log")
 
 
 if __name__ == "__main__":
