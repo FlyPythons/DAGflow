@@ -23,7 +23,7 @@ import logging
 import time
 import json
 import signal
-from .DAG import Task, DAG
+from DAGflow import DAG
 
 
 LOG = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ def ps():
     return r
 
 
-def update_task_status(tasks):
+def update_task_status(tasks, stop_on_failure):
     """
 
     :param tasks:
@@ -133,12 +133,19 @@ def update_task_status(tasks):
 
         # check recent done tasks on sge
         if task.type == "sge" and task.run_id not in sge_running_task:
-            task.check_done()
+            status = task.check_done()
+
+            if not status and stop_on_failure:
+                LOG.info("Task %r failed, stop all tasks" % task.id)
+                del_online_tasks()
             continue
         elif task.type == "local":
-            if task.run_id.poll():
-                task.check_done()
+            if not task.run_id.poll():
+                status = task.check_done()
 
+                if not status and stop_on_failure:
+                    LOG.info("Task %r failed, stop all tasks" % task.id)
+                    del_online_tasks()
             continue
         else:
             pass
@@ -192,7 +199,11 @@ def submit_tasks(tasks, concurrent_tasks):
     return tasks
 
 
-def qdel_online_tasks(signum, frame):
+def del_task_hander(signum, frame):
+    del_online_tasks()
+
+
+def del_online_tasks():
     LOG.info("delete all running jobs, please wait")
     time.sleep(3)
 
@@ -201,44 +212,37 @@ def qdel_online_tasks(signum, frame):
         if task.status == "running":
             task.kill()
 
-    write_tasks(TASKS, TASK_NAME + ".json")
+    write_tasks(TASKS)
 
     sys.exit("sorry, the program exit")
 
 
-def write_tasks(tasks, filename):
+def write_tasks(tasks):
     failed_tasks = []
-
-    tasks_json = OrderedDict()
 
     for id, task in tasks.items():
 
         if task.status != "success":
             failed_tasks.append(task.id)
 
-        tasks_json.update(task.to_json())
-
-    with open(filename, "w") as out:
-        json.dump(tasks_json, out, indent=2)
-
     if failed_tasks:
         LOG.info("""\
 The following tasks were failed:
 %s
-The tasks were save in %s, you can resub it.
-                    """ % ("\n".join([i for i in failed_tasks]), filename))
+""" % "\n".join([i for i in failed_tasks]))
         sys.exit("sorry, the program exit with some jobs failed")
     else:
         LOG.info("All jobs were done!")
 
 
-def do_dag(dag, concurrent_tasks, refresh_time, log_name=""):
+def do_dag(dag, concurrent_tasks=200, refresh_time=60, stop_on_failure=False):
 
+    dag.to_json()
     start = time.time()
 
     logging.basicConfig(level=logging.DEBUG,
                         format="[%(levelname)s] %(asctime)s  %(message)s",
-                        filename=log_name,
+                        filename="%s.log" % dag.id,
                         filemode='w',
                         )
 
@@ -253,14 +257,12 @@ def do_dag(dag, concurrent_tasks, refresh_time, log_name=""):
     global TASKS
     TASKS = dag.tasks
 
-    signal.signal(signal.SIGINT, qdel_online_tasks)
-    signal.signal(signal.SIGTERM, qdel_online_tasks)
+    signal.signal(signal.SIGINT, del_task_hander)
+    signal.signal(signal.SIGTERM, del_task_hander)
     # signal.signal(signal.SIGKILL, qdel_online_tasks)
 
     for id, task in TASKS.items():
         task.init()
-
-    failed_json = TASK_NAME + ".json"
 
     loop = 0
 
@@ -292,10 +294,10 @@ def do_dag(dag, concurrent_tasks, refresh_time, log_name=""):
         else:
             time.sleep(refresh_time)
             loop += 1
-            update_task_status(TASKS)
+            update_task_status(TASKS, stop_on_failure)
 
     # write failed
-    write_tasks(TASKS, failed_json)
+    write_tasks(TASKS)
     totalTime = time.time() - start
     LOG.info('Total time:' + time.strftime("%H:%M:%S", time.gmtime(totalTime)))
 
@@ -314,7 +316,8 @@ Version: V0.9
 
     parser.add_argument("json",  help="The json file contain DAG information")
     parser.add_argument("-m", "--max_task", type=int, default=200, help="concurrent_tasks")
-    parser.add_argument("-r", "--refresh", type=int, default=30, help="refresh time of task status (seconds)")
+    parser.add_argument("-r", "--refresh", type=int, default=60, help="refresh time of task status (seconds)")
+    parser.add_argument("-s", "--stopOnFailure", action="store_true", help="stop all tasks when any task failure")
     args = parser.parse_args()
 
     return args
@@ -327,7 +330,7 @@ def main():
     TASK_NAME = os.path.splitext(os.path.basename(args.json))[0]
     print(TASK_NAME)
     dag = DAG.from_json(args.json)
-    do_dag(dag, args.max_task, args.refresh, TASK_NAME+".log")
+    do_dag(dag, args.max_task, args.refresh, args.stopOnFailure)
 
 
 if __name__ == "__main__":

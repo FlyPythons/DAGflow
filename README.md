@@ -36,7 +36,8 @@ To complete this work, a workflow as following is needed
 At first, you should write your workflow script 
 ```python
 import os
-from DAGflow.DAG import DAG, Task
+from DAGflow import DAG, Task
+from DAGflow.do_DAG import do_dag
 
 
 inputs = ['1.fasta', "2.fasta", "3.fasta", "4.fasta"]
@@ -47,7 +48,7 @@ db = os.path.abspath(db)
 my_dag = DAG("blast")
 # create the first task 'make_db'
 make_db = Task(
-    task_id="make_db",  # your task id, should be unique
+    id="make_db",  # your task id, should be unique
     work_dir="",  # you task work directory
     type="local",  # the way your task run. if "sge", task will submit with qsub
     option={},  # the option of "sge" or "local"
@@ -64,7 +65,7 @@ n = 1
 for fn in inputs:
     task_id = "blast_%s" % n
     task = Task(
-        task_id= task_id,
+        id= task_id,
         work_dir=task_id,
         type="sge", 
         option={
@@ -82,7 +83,7 @@ for fn in inputs:
 
 # add blast_join task to join blast results
 blast_join = Task(
-    task_id="blast_join",
+    id="blast_join",
     work_dir="",
     type="local",  # option is default
     script="cat */*.m6 > blast.all.m6"
@@ -93,10 +94,8 @@ my_dag.add_task(blast_join)
 blast_join.set_upstream(*blast_tasks)
 
 # all of you tasks were added to you workflow, you can run it
-# write you workflow to a json file
-js = my_dag.to_json()
-# submit you workflow tasks with do_DAG
-os.system("python -m DAGflow.do_DAG %s" % js)
+do_dag(my_dag)
+
 ```
 Now, your workflow script is completed, you can name it as 'workflow.py'
 ### Run you workflow 
@@ -106,15 +105,11 @@ python workflow.py
 ```
 ### Re-run your workflow if it was break in the middle
 For some reason, you workflow was broken with some tasks undone.  
-You can use the following commands to re-run the undone jobs.
-```commandline
-python -m DAGflow.do_DAG blast.json 
-# note that the blast.json is in you work directory, 'blast' is your DAG id.
-```
+You can use the same command `python workflow.py`  to re-run the undone jobs.
 ### Add workflow to workflow
 Sometimes you may want to add a workflow to another workflow, this can be down as following:  
 ```python
-from DAGflow.DAG import *
+from DAGflow import *
 
 
 # two workflow wf1 and wf2

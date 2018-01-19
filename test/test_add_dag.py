@@ -4,39 +4,26 @@ test on DAG.add_dag
 """
 
 
-from DAGflow.DAG import *
+from DAGflow import *
 
 workflow = DAG("test")
 
 task1 = Task(
-    task_id="task1",
+    id="task1",
     work_dir="",
     type="sge",
-    script="echo running workflow task 1"
+    script="echo running workflow task 1\nsleep 5"
 )
 
 workflow.add_task(task1)
 
 task2 = Task(
-    task_id="task2",
+    id="task2",
     work_dir="task2",
     type="local",
-    script="echo running workflow task 3"
+    script="echo running workflow task 2\n sleep 5"
 )
 workflow.add_task(task2)
 task2.set_upstream(task1)
 
-wf2 = DAG("test2")
-
-task3 = Task(
-    task_id="task3",
-    work_dir=".",
-    type="local",
-    script="echo running workflow task 3"
-)
-
-wf2.add_task(task3)
-
-workflow.add_dag(wf2)
-
-workflow.print_task()
+do_dag(workflow, 200, 10, "test")

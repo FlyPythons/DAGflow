@@ -125,7 +125,7 @@ class Task(object):
         self.script = script
         self.type = type
         self._option = option
-        self.done = os.path.join(work_dir, "%s_done" % id)
+        self.done = os.path.join(self.work_dir, "%s_done" % id)
 
         self.depends = []
         self.status = None
@@ -157,9 +157,9 @@ class Task(object):
         """
         if self.end_time and self.start_time:
             _time = self.end_time - self.start_time
-            return "%ss" % _time
+            return "%s" % int(_time)
         else:
-            return "0s"
+            return "0"
 
     """
     Functions to describe relationship between tasks
@@ -298,15 +298,21 @@ date
         return 1
 
     def check_done(self):
+        """
+        check the status of done task
+        :return: success 1 or fail 0
+        """
         if os.path.isfile(self.done):
             self.status = "success"
             self.end_time = time.time()
             LOG.info("task %r finished by %s seconds" % (self.id, self.run_time))
+
+            return 1
         else:
             self.status = "failed"
             LOG.info("task %r run but failed" % self.id)
 
-        return 1
+            return 0
 
     """
     methods to read and write Task from json
