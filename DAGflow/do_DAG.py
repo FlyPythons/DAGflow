@@ -140,7 +140,7 @@ def update_task_status(tasks, stop_on_failure):
                 del_online_tasks()
             continue
         elif task.type == "local":
-            if not task.run_id.poll():
+            if task.run_id.poll() is not None:
                 status = task.check_done()
 
                 if not status and stop_on_failure:
