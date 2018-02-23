@@ -235,22 +235,10 @@ The following tasks were failed:
         LOG.info("All jobs were done!")
 
 
-def do_dag(dag, concurrent_tasks=200, refresh_time=60, stop_on_failure=False):
+def do_dag(dag, concurrent_tasks=10, refresh_time=60, stop_on_failure=False):
 
     dag.to_json()
     start = time.time()
-
-    logging.basicConfig(level=logging.DEBUG,
-                        format="[%(levelname)s] %(asctime)s  %(message)s",
-                        filename="%s.log" % dag.id,
-                        filemode='w',
-                        )
-
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter('[%(levelname)s] %(asctime)s  %(message)s')
-    console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
 
     LOG.info("Start job.")
 
@@ -328,8 +316,21 @@ def main():
     args = get_args()
 
     TASK_NAME = os.path.splitext(os.path.basename(args.json))[0]
-    print(TASK_NAME)
+
     dag = DAG.from_json(args.json)
+
+    logging.basicConfig(level=logging.INFO,
+                        format="[%(levelname)s] %(asctime)s  %(message)s",
+                        filename="%s.log" % dag.id,
+                        filemode='w',
+                        )
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('[%(levelname)s] %(asctime)s  %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+
     do_dag(dag, args.max_task, args.refresh, args.stopOnFailure)
 
 
