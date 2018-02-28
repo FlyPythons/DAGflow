@@ -67,7 +67,6 @@ class DAG(object):
         jsn = OrderedDict()
 
         for id, task in self.tasks.items():
-            task.write_script()
 
             jsn.update(task.to_json())
 
@@ -231,6 +230,9 @@ date
         run the job
         :return:
         """
+
+        self.write_script()
+
         if self.type == "sge":
 
             qsub_option = dict2str(self.option)
@@ -374,6 +376,55 @@ def mkdir(d):
         LOG.debug('mkdir {!r}, {!r} exist'.format(d, d))
 
     return d
+
+
+def ParallelTask(id, script="", work_dir="", type="sge", option="", **extra):
+    parallel_num = 0
+
+    args = {}
+    my_list = []
+
+    for key, value in extra.items():
+        if isinstance(value, list):
+            if parallel_num == 0:
+                parallel_num = len(value)
+
+            else:
+                assert len(value) == parallel_num, "diverse list length in options"
+
+            my_list.append(key)
+        else:
+            args[key] = value
+
+    tasks = []
+
+    for n in range(parallel_num):
+
+        for i in my_list:
+            args[i] = extra[i][n]
+
+        task = Task(
+            id="%s_%04d" % (id, n),
+            work_dir=work_dir.format(**args),
+            script=script.format(**args),
+            type=type,
+            option=option.format(**args)
+        )
+
+        tasks.append(task)
+
+    return tasks
+
+
+def set_tasks_order(task1, task2):
+
+    assert isinstance(task1, list)
+    assert isinstance(task2, list)
+
+    for task in task2:
+        task.set_upstream(*task1)
+
+    return 0
 
 
 def str2dict(string):

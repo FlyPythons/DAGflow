@@ -23,7 +23,7 @@ import logging
 import time
 import json
 import signal
-from DAGflow import DAG
+from . import DAG
 
 
 LOG = logging.getLogger(__name__)
@@ -233,6 +233,7 @@ The following tasks were failed:
         sys.exit("sorry, the program exit with some jobs failed")
     else:
         LOG.info("All jobs were done!")
+        return 0
 
 
 def do_dag(dag, concurrent_tasks=10, refresh_time=60, stop_on_failure=False):
@@ -240,7 +241,8 @@ def do_dag(dag, concurrent_tasks=10, refresh_time=60, stop_on_failure=False):
     dag.to_json()
     start = time.time()
 
-    LOG.info("Start job.")
+    LOG.info("DAG: %s, %s tasks" % (dag.id, len(dag.tasks)))
+    LOG.info("Run with %s tasks concurrent and status refreshed per %ss" % (concurrent_tasks, refresh_time))
 
     global TASKS
     TASKS = dag.tasks
@@ -285,9 +287,10 @@ def do_dag(dag, concurrent_tasks=10, refresh_time=60, stop_on_failure=False):
             update_task_status(TASKS, stop_on_failure)
 
     # write failed
-    write_tasks(TASKS)
+    status = write_tasks(TASKS)
     totalTime = time.time() - start
     LOG.info('Total time:' + time.strftime("%H:%M:%S", time.gmtime(totalTime)))
+    return status
 
 
 def get_args():
