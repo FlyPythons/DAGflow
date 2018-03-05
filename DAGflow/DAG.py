@@ -24,6 +24,7 @@ class DAG(object):
 
     def add_task(self, *tasks):
         for task in tasks:
+            assert id not in self.tasks, "task id %r has been exist in DAG" % id
             self.tasks[task.id] = task
 
         return 1
@@ -116,7 +117,6 @@ class Task(object):
     def __init__(self, id, script, work_dir=".", type="sge", option=""):
 
         assert type in ["sge", "local"], "type must be sge or local "
-        assert id not in self.TASKS, "task id %r has been exist" % id
 
         self.id = id
         self.TASKS.append(id)
@@ -449,11 +449,13 @@ def str2dict(string):
                     r[param] = " ".join(value)
                 else:
                     r[param] = True
-
-                param = p.lstrip("-")
-                value = []
+            param = p.lstrip("-")
+            value = []
         else:
             value.append(p)
+
+    if param:
+        r[param] = " ".join(value)
 
     return r
 
