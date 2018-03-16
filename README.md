@@ -36,8 +36,7 @@ To complete this work, a workflow as following is needed
 At first, you should write your workflow script 
 ```python
 import os
-from DAGflow import DAG, Task
-from DAGflow.do_DAG import do_dag
+from DAGflow import DAG, Task, ParallelTask, do_dag
 
 
 inputs = ['1.fasta', "2.fasta", "3.fasta", "4.fasta"]
@@ -59,28 +58,15 @@ make_db = Task(
 my_dag.add_task(make_db)
 
 # then add blast tasks
-blast_tasks = []  # a list to obtain blast tasks
+blast_tasks = ParallelTask(id="blast",
+                            work_dir="{id}",
+                            type="sge",
+                            option="-pe smp 4 -q all.q",
+                            script="blastn -in {query} -db %s -outfmt 6 -out {query}.m6",
+                            query=inputs)
 
-n = 1
-for fn in inputs:
-    task_id = "blast_%s" % n
-    task = Task(
-        id= task_id,
-        work_dir=task_id,
-        type="sge", 
-        option={
-            "pe": "smp 4",
-            "q": "all.q"
-        },
-        script="blastn -in %s -db %s -outfmt 6 -out %s" % (fn, db, "%s.m6" % task_id)
-    )
-    
-    my_dag.add_task(task)
-    # set the upstream of the task, this means this task required 'make_db' done
-    task.set_upstream(make_db)
-    blast_tasks.append(task)
-    n += 1
-
+my_dag.add_task(*blast_tasks)
+make_db.set_downstream(*blast_tasks)
 # add blast_join task to join blast results
 blast_join = Task(
     id="blast_join",
