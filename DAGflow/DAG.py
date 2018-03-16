@@ -398,14 +398,18 @@ def ParallelTask(id, script="", work_dir="", type="sge", option="", **extra):
 
     tasks = []
 
+    id_format = "%s_{:0>%s}" % (id, len(str(parallel_num)))
+
     for n in range(parallel_num):
 
         for i in my_list:
             args[i] = extra[i][n]
 
+        _id = id_format.format(n+1)
+
         task = Task(
-            id="%s_%04d" % (id, n),
-            work_dir=work_dir.format(**args),
+            id=_id,
+            work_dir=work_dir.format(**args, id=_id),
             script=script.format(**args),
             type=type,
             option=option.format(**args)
