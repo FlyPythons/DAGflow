@@ -1,12 +1,12 @@
 # DAGflow
 a python Module to create DAG Task and Manage Task on SGE
 ## Installation
-### Requirements
+### 1. Requirements
 Python (2.5 or later)  
 Sun Grid Engine(SGE)
 
 DAGflow has been tested on CentOS 7.2.1511 and Ubuntu 12.04.4 LTS
-### Get the code
+### 2. Install
 Download the code and unzip it into desired installation directory 
 ```commandline
 git clone https://github.com/FlyPythons/DAGflow.git
@@ -14,7 +14,7 @@ git clone https://github.com/FlyPythons/DAGflow.git
 
 ## Tutorial
 The following tutorial shows how to create a DAGflow and run it
-### Draw you work flow
+### 1. Draw you work flow
 Now i have a set of fasta files and i want to blast them to a db named 'db.fasta'.  
 To complete this work, a workflow as following is needed
 ![image](https://github.com/FlyPythons/DAGflow/raw/master/test/workflow.jpg)
@@ -70,7 +70,7 @@ do_dag(my_dag)
 
 ```
 Now, your workflow script is completed, you can name it as 'workflow.py'
-### Run you workflow 
+### 2. Run you workflow 
 You can run you workflow script as a python script using the following commands.
 ```commandline
 python workflow.py
