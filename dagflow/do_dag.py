@@ -1,29 +1,9 @@
-#!/usr/bin/env python
-"""
-This script is used to submit DAG tasks from .json
-The json can be created by another module DAG
-
-Author: fan junpeng (jpfan@whu.edu.cn)
-Version: V0.2
-Last modified: 20171227
-
-task status:
-preparing  the job depends on other jobs, but not all of these jobs are running.
-waiting    the job is waiting for submit to run due to max jobs
-running    the job is submitted
-success    the job was done and success
-failed     the job was done but failed
-"""
-
 import os
 from collections import OrderedDict
-import argparse
 import sys
 import logging
 import time
-import json
 import signal
-from . import DAG
 
 
 LOG = logging.getLogger(__name__)
@@ -238,7 +218,14 @@ The following tasks were failed:
 
 def do_dag(dag, concurrent_tasks=10, refresh_time=60, stop_on_failure=False):
 
-    dag.to_json()
+    #dag.to_json()
+
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=logging.INFO,
+        format="[%(levelname)s] %(message)s"
+    )
+
     start = time.time()
 
     LOG.info("DAG: %s, %s tasks" % (dag.id, len(dag.tasks)))
@@ -291,52 +278,4 @@ def do_dag(dag, concurrent_tasks=10, refresh_time=60, stop_on_failure=False):
     totalTime = time.time() - start
     LOG.info('Total time:' + time.strftime("%H:%M:%S", time.gmtime(totalTime)))
     return status
-
-
-def get_args():
-
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description="""\
-This script is used to submit DAG tasks from .json
-The json can be created by another module DAG
-
-Author: fan junpeng (jpfan@whu.edu.cn)
-Version: V0.9
-        """)
-
-    parser.add_argument("json",  help="The json file contain DAG information")
-    parser.add_argument("-m", "--max_task", type=int, default=200, help="concurrent_tasks")
-    parser.add_argument("-r", "--refresh", type=int, default=60, help="refresh time of task status (seconds)")
-    parser.add_argument("-s", "--stopOnFailure", action="store_true", help="stop all tasks when any task failure")
-    args = parser.parse_args()
-
-    return args
-
-
-def main():
-    global TASK_NAME
-    args = get_args()
-
-    TASK_NAME = os.path.splitext(os.path.basename(args.json))[0]
-
-    dag = DAG.from_json(args.json)
-
-    logging.basicConfig(level=logging.INFO,
-                        format="[%(levelname)s] %(asctime)s  %(message)s",
-                        filename="%s.log" % dag.id,
-                        filemode='w',
-                        )
-
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter('[%(levelname)s] %(asctime)s  %(message)s')
-    console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
-
-    do_dag(dag, args.max_task, args.refresh, args.stopOnFailure)
-
-
-if __name__ == "__main__":
-    main()
 

@@ -1,9 +1,3 @@
-"""
-Module to create DAG tasks
-Author: fan junpeng(jpfan@whu.edu.cn)
-Version: 0.2
-"""
-
 import os.path
 from collections import OrderedDict
 import json
@@ -59,7 +53,7 @@ class DAG(object):
                 if not task.depends:
                     task.set_upstream(*last_task)
 
-            self.add_task(*dag.tasks)
+            self.add_task(*dag.tasks.values())
 
         return 1
 
@@ -139,12 +133,14 @@ class Task(object):
         :return:
         """
         option = str2dict(self._option)
+        out = os.path.join(self.work_dir, "%s.STDOUT" % self.id)
+        err = os.path.join(self.work_dir, "%s.STDERR" % self.id)
 
         if "o" not in option:
-            option["o"] = os.path.join(self.work_dir, "%s.STDOUT" % self.id)
+            option["o"] = out
 
         if "e" not in option:
-            option["e"] = os.path.join(self.work_dir, "%s.STDERR" % self.id)
+            option["e"] = err
 
         return option
 
@@ -236,8 +232,9 @@ date
         if self.type == "sge":
 
             qsub_option = dict2str(self.option)
+            _id = self.id
             script_path = os.path.join(self.work_dir, "%s.sh" % self.id)
-            run_cmd = "qsub {qsub_option} {script_path}".format(**locals())
+            run_cmd = "qsub {qsub_option} -N {_id} {script_path}".format(**locals())
 
             _id = os.popen(run_cmd).read().strip().split()[2]
 
@@ -409,7 +406,7 @@ def ParallelTask(id, script="", work_dir="", type="sge", option="", **extra):
 
         task = Task(
             id=_id,
-            work_dir=work_dir.format(**args, id=_id),
+            work_dir=work_dir.format(id=_id, **args),
             script=script.format(**args),
             type=type,
             option=option.format(**args)
