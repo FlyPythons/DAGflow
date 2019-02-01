@@ -18,7 +18,7 @@ The following tutorial shows how to create a DAGflow and run it
 Now i have a set of fasta files and i want to blast them to a db named 'db.fasta'.  
 To complete this work, a workflow as following is needed
 ![image](https://github.com/FlyPythons/DAGflow/raw/master/test/workflow.jpg)
-### Write your workflow script
+### 2. Write your workflow script
 At first, you should write your workflow script 
 ```python
 import os
@@ -70,7 +70,7 @@ do_dag(my_dag)
 
 ```
 Now, your workflow script is completed, you can name it as 'workflow.py'
-### 2. Run you workflow 
+### 3. Run you workflow 
 You can run you workflow script as a python script using the following commands.
 ```commandline
 python workflow.py
