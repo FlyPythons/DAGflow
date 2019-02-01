@@ -9,23 +9,9 @@ DAGflow has been tested on CentOS 7.2.1511 and Ubuntu 12.04.4 LTS
 ### Get the code
 Download the code and unzip it into desired installation directory 
 ```commandline
-mkdir /usr/local/pythonlib
-cd /usr/local/pythonlib
-wget https://github.com/FlyPythons/DAGflow/archive/master.zip
-unzip master.zip
+git clone https://github.com/FlyPythons/DAGflow.git
 ```
-### Test installation
-Add the installation directory to your PYTHONPATH.
-```commandline
-    
-```
-Test
-```commandline
-cd /usr/local/pythonlib/DAGflow-master/test
-python test.py
 
-```
-if you see "Test passed, Congratulations!", the test passed.
 ## Tutorial
 The following tutorial shows how to create a DAGflow and run it
 ### Draw you work flow
@@ -36,7 +22,7 @@ To complete this work, a workflow as following is needed
 At first, you should write your workflow script 
 ```python
 import os
-from DAGflow import DAG, Task, ParallelTask, do_dag
+from dagflow import DAG, Task, ParallelTask, do_dag
 
 
 inputs = ['1.fasta', "2.fasta", "3.fasta", "4.fasta"]
@@ -48,7 +34,7 @@ my_dag = DAG("blast")
 # create the first task 'make_db'
 make_db = Task(
     id="make_db",  # your task id, should be unique
-    work_dir="",  # you task work directory
+    work_dir=".",  # you task work directory
     type="local",  # the way your task run. if "sge", task will submit with qsub
     option={},  # the option of "sge" or "local"
     script="makeblastdb -in %s -dbtype nucl" % db  # the command of the task
@@ -70,7 +56,7 @@ make_db.set_downstream(*blast_tasks)
 # add blast_join task to join blast results
 blast_join = Task(
     id="blast_join",
-    work_dir="",
+    work_dir=".",
     type="local",  # option is default
     script="cat */*.m6 > blast.all.m6"
 )
@@ -92,7 +78,7 @@ python workflow.py
 ### Re-run your workflow if it was break in the middle
 For some reason, you workflow was broken with some tasks undone.  
 You can use the same command `python workflow.py`  to re-run the undone jobs.
-### Add workflow to workflow
+### set dependence between workflow and task
 Sometimes you may want to add a workflow to another workflow, this can be down as following:  
 ```python
 from DAGflow import *
@@ -101,9 +87,15 @@ from DAGflow import *
 # two workflow wf1 and wf2
 wf1 = DAG("workflow1")
 wf2 = DAG("workflow2")
+task1 = Task(
+    id="task",
+    work_dir=".",
+    script="hello, i am a task"
+)
 
-# you can add task to these 2 workflow
-
-# you can add workflow2 to the end of workflow1 as following
+# set wf2 depends on wf1
 wf1.add_dag(wf2)
+
+# set task1 depends on wf2
+task1.set_upstream(wf2.tasks.values())
 ```
